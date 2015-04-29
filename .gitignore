@@ -1,12 +1,228 @@
-*.class
+package queimachallenge;
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Scanner;
+import java.util.StringTokenizer;
 
-# Package Files #
-*.jar
-*.war
-*.ear
+/**
+ *
+ * @author André Mateus
+ */
+public class QueimaChallenge {
+    // CHANGE HERE THE FILES PATH //
+    protected static String fileTime = "C:\\Users\\AndreMateus\\Desktop\\Challenge_Queima\\data\\time.csv";
+    protected static String fileDistance = "C:\\Users\\AndreMateus\\Desktop\\Challenge_Queima\\data\\distance.csv";
+    protected static String filePrice = "C:\\Users\\AndreMateus\\Desktop\\Challenge_Queima\\data\\cost.csv";
+    // -------------------------- //
+    protected static ArrayList<ArrayList<String>>timeAL = new ArrayList<>();
+    protected static ArrayList<ArrayList<String>>distanceAL = new ArrayList<>();
+    protected static ArrayList<ArrayList<String>>priceAL = new ArrayList<>();
+    
+    protected static String startCity, endCity;
+    protected static int pathCostTimeAL = 0, pathCostDistanceAL = 0;
+    protected static float pathCostPriceAL = 0;
+   
+    public static void main(String[] args) throws FileNotFoundException, IOException{
+        fillArrayList(timeAL,fileTime);
+        fillArrayList(distanceAL,fileDistance);
+        fillArrayList(priceAL,filePrice);
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
+        nearestNeighbor();
+    }
+    
+    private static void fillArrayList(ArrayList<ArrayList<String>>x, String fileName) throws FileNotFoundException, IOException{
+        ArrayList<String> temp = new ArrayList<>();
+        File file = new File(fileName);
+        int aux = 0, aux2 = 0;
+        String strLine;
+        
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            while((strLine = br.readLine()) != null){
+                strLine = strLine.replaceAll(";;",";*;");
+                strLine = strLine.replaceAll(";;",";*;");
+                StringTokenizer st = new StringTokenizer(strLine, ";");
+                            
+                while(st.hasMoreTokens()){
+                    temp.add(st.nextToken());
+                    if("*".equals(temp.get(aux2))){
+                        temp.set(aux2, x.get(aux2).get(aux));
+                    }
+                    aux2++;
+                }
+                x.add(temp);
+                temp = new ArrayList<>();
+                aux2 = 0;
+                aux++;
+            }
+        }
+    }
+            
+    private static void nearestNeighbor(){
+        ArrayList<String> path = new ArrayList<>();
+
+        askForCitiesNoProtections();
+        
+        // --- TIME --- //
+        fillCitiesAL(path);
+        findBestPathAL(timeAL,path,1);
+        printPathAL(path,pathCostTimeAL,1);
+        
+        // --- DISTANCE --- //
+        path = new ArrayList<>();
+        fillCitiesAL(path);
+        findBestPathAL(distanceAL,path,2);
+        printPathAL(path,pathCostDistanceAL,2);
+        
+        // --- PRICE --- //
+        path = new ArrayList<>();
+        fillCitiesAL(path);
+        findBestPathAL(priceAL,path,3);
+        printPathAL(path,pathCostPriceAL,3);
+    }
+    
+    private static void askForCitiesNoProtections(){
+        Scanner reader = new Scanner(System.in);
+        
+        startCity = reader.next();
+        reader.next();
+        endCity = reader.next();
+    }
+        
+    private static void fillCitiesAL(ArrayList<String>x){        
+        for(int i = 0 ; i < 15 ; i++){
+            x.add(null);
+        } 
+        x.set(0, startCity);
+        x.set((x.size()-1), endCity);
+    }
+    
+    private static void findBestPathAL(ArrayList<ArrayList<String>>x, ArrayList<String>path, int temp){
+        if(temp == 1){
+            path.set(1, closestCityAL(x,path,path.get(0),temp));
+            for(int i = 2 ; i < 14 ; i++){
+                path.set(i, closestCityAL(x,path,path.get(i-1),temp));
+            }
+            if(Integer.parseInt(x.get(1).get(1)) == 0){
+                pathCostTimeAL += Integer.parseInt(x.get(1).get(2));
+            }
+            else{
+                pathCostTimeAL += Integer.parseInt(x.get(1).get(1));
+            }            
+        } 
+        else if(temp == 2){
+            path.set(1, closestCityAL(x,path,path.get(0),temp));
+            for(int i = 2 ; i < 14 ; i++){
+                path.set(i, closestCityAL(x,path,path.get(i-1),temp));
+            }
+            if(Integer.parseInt(x.get(1).get(1)) == 0){
+                pathCostDistanceAL += Integer.parseInt(x.get(1).get(2));
+            }
+            else{
+                pathCostDistanceAL += Integer.parseInt(x.get(1).get(1));
+            }            
+        }
+        else{
+            path.set(1, closestCityAL(x,path,path.get(0),temp));
+            for(int i = 2 ; i < 14 ; i++){
+                path.set(i, closestCityAL(x,path,path.get(i-1),temp));
+            }
+            if(Float.parseFloat(x.get(1).get(1)) == 0){
+                pathCostPriceAL += Float.parseFloat(x.get(1).get(2));
+            }
+            else{
+                pathCostPriceAL += Float.parseFloat(x.get(1).get(1));
+            }            
+        }
+    }
+       
+    private static String closestCityAL(ArrayList<ArrayList<String>>x, ArrayList<String>path, String city, int temp){
+        int tempMin = Integer.MAX_VALUE, cityPos = x.get(0).indexOf(city);
+        float tempMinD = (int)Integer.MAX_VALUE;
+        String closestCity = new String();
+
+        if(temp == 1){
+            for(int i = 1 ; i < x.size() ; i++){
+                if((Integer.parseInt(x.get(cityPos).get(i)) < tempMin) && (Integer.parseInt(x.get(cityPos).get(i)) > 0) && (!(path.contains(x.get(0).get(i))))){
+                    tempMin = Integer.parseInt(x.get(cityPos).get(i));
+                    closestCity = x.get(0).get(i);   
+                }
+            }
+            pathCostTimeAL += tempMin;
+            removeCity(x,city);
+        }
+        else if(temp == 2){
+            for(int i = 1 ; i < x.size() ; i++){
+                if((Integer.parseInt(x.get(cityPos).get(i)) < tempMin) && (Integer.parseInt(x.get(cityPos).get(i)) > 0) && (!(path.contains(x.get(0).get(i))))){
+                    tempMin = Integer.parseInt(x.get(cityPos).get(i));
+                    closestCity = x.get(0).get(i);   
+                }
+            }
+            pathCostDistanceAL += tempMin;
+            removeCity(x,city);
+        }
+        else{
+            for(int i = 1 ; i < x.size() ; i++){
+                if((Float.parseFloat(x.get(cityPos).get(i)) < tempMinD) && (Float.parseFloat(x.get(cityPos).get(i)) > 0) && (!(path.contains(x.get(0).get(i))))){
+                    tempMinD = Float.parseFloat(x.get(cityPos).get(i));
+                    closestCity = x.get(0).get(i);   
+                }
+            }
+            pathCostPriceAL += tempMinD;
+            removeCity(x,city);
+        }
+        return closestCity;
+    }
+    
+    private static void removeCity(ArrayList<ArrayList<String>>x, String city){
+        int cityPos = x.get(0).indexOf(city);
+        
+        // Remove city line
+        x.remove(cityPos);
+        
+        // Remove city row
+        for (ArrayList<String> x1 : x) {
+            x1.remove(cityPos);
+        }
+    }
+    
+    protected static void printPathAL(ArrayList<String>path, float cost, int temp){
+        if(temp == 1){
+            System.out.println("\nA rota que leva menos tempo começando em " + path.get(0) + " e terminando em " + path.get(path.size()-1) + " segue o percurso: ");
+        }
+        else if(temp == 2){
+            System.out.println("\nA rota que percorre menos distância começando em " + path.get(0) + " e terminando em " + path.get(path.size()-1) + " segue o percurso: ");
+        }
+        else{
+            System.out.println("\nA rota que tem menos custo começando em " + path.get(0) + " e terminando em " + path.get(path.size()-1) + " segue o percurso: ");
+        }
+        
+        for(int i = 0 ; i < path.size() ; i++){
+            if(i != (path.size()-1)){
+                if(i == 9){
+                    System.out.println(path.get(i) + ", ");
+                }
+                else{
+                    System.out.print(path.get(i) + ", ");
+                }
+            }
+            else{
+                System.out.print(path.get(i));
+            }
+        }
+        
+        if(temp == 1){
+            System.out.println(" levando um total de " + (int)cost + " horas.");
+        }
+        else if(temp == 2){
+            System.out.println(" percorrendo um total de " + (int)cost + " km.");
+        }
+        else{
+            System.out.println(" custando um total de " + cost + " €.");
+        }
+    }
+}
